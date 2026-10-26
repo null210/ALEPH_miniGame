@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="style.css">
+<title>90초 – 아이작 라이트</title>
+</head>
+<body>
+<main class="wrap">
+<div class="stage"><div class="cw"><canvas id="c" width="800" height="500" aria-label="90초 게임 화면"></canvas><button id="bMute" type="button" aria-pressed="false">🔊</button></div></div>
+<aside>
+  <h1>90초</h1>
+  <div class="row"><button id="bStart">시작</button><button id="bPause" disabled>일시정지</button></div>
+  <div class="row"><label><input type="checkbox" id="rm">움직임 줄이기</label></div>
+  <p id="note" role="status"></p>
+  <h2>현재 상태</h2>
+  <dl>
+    <dt>상태</dt><dd id="st" aria-live="polite">대기 중</dd>
+    <dt>체력</dt><dd id="hp"></dd>
+    <dt>남은 시간</dt><dd id="tm"></dd>
+    <dt>처치 / 발사</dt><dd id="kl"></dd>
+    <dt>능력</dt><dd id="pw"></dd>
+  </dl>
+  <h2>규칙</h2>
+  <p>네 곳의 문에서 파리가 나옵니다. 파리는 총 한 발에 죽고, 플레이어는 파리가 닿으면 체력이 줄어듭니다. <b>90초 동안 체력이 남아 있으면 성공</b>, <b>체력 0이면 실패</b>입니다. 시간이 갈수록 파리가 더 빨리 나옵니다. 파리를 잡으면 아이템이 떨어질 수 있습니다: ‖ 1타 2피 · ✚ 사방 발사 · ♥ 생명+1 · » 연사 · ↠ 이동 · ⇉ 관통</p>
+  <h2>조작</h2>
+  <p>이동 <b>W A S D</b><br>눈물 발사 <b>방향키</b> (누를 때마다 1회, 누르고 있으면 연사)<br>일시정지 <b>P</b> 또는 <b>Esc</b> (클릭으로 재개)<br>시작·다시 시작 <b>Enter</b> 또는 위 버튼</p>
+  <details><summary>효과 안내</summary>
+    <p>소리·흔들림은 아래 3가지 사건에서만 나옵니다. ① 피격: 낮은 소리 + 화면 흔들림 ② 아이템 획득: 높은 소리 ③ 성공/실패: 끝 소리. 이동·발사에는 효과가 없습니다. 게임 화면 우측 상단 스피커 버튼은 소리를 즉시 끄고 켜며, 움직임 줄이기는 흔들림·깜빡임을 즉시 멈춥니다.</p></details>
+  <details><summary>난이도 · 기록</summary>
+    <div class="row"><label>난이도
+      <select id="spd"></select></label></div>
+    <p>easy·normal·hard로 나눠지며, 난이도가 높아질 수록 파리가 더 많이, 더 빠르게 나옵니다. 판이 끝나면 기록이 자동 저장됩니다(이 브라우저에만 저장, 개인정보 없음). 진행 중에는 값을 바꿀 수 없습니다.</p>
+    <table id="sum"></table>
+    <pre id="recent"></pre>
+    <button id="bClear">기록 지우기</button></details>
+  <details><summary>확인 방법</summary>
+    <p>① 어디로: 이 페이지 주소를 시크릿 창에서 엽니다(로그인 없음).<br>② 3단계: 1) Enter 또는 시작 버튼 2) WASD로 피하고 방향키로 쏘기 3) 90초 버티기 또는 체력 0까지 플레이<br>③ 통과: 상태 칸이 “성공” 또는 “실패”로 바뀌고 기록 표에 한 판이 추가됩니다.<br>④ 안 될 때: 화면에 “일시정지”가 보이면 P·Esc·클릭으로 재개합니다. 키가 안 먹으면 게임 화면을 한 번 클릭합니다. 저장값이 손상되면 위쪽에 빨간 안내가 보이고 기본값으로 시작합니다.</p></details>
+</aside>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
