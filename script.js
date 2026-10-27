@@ -39,18 +39,20 @@ const IT={
  double:{g:'‖',n:'1타 2피',c:'#a8d8ff',w:2,f(){p.shots=Math.min(4,p.shots+1)}},
  cross:{g:'✚',n:'사방 발사',c:'#ffd479',w:1.5,f(){p.cross=true}},
  heart:{g:'♥',n:'생명 +1',c:'#e0364b',w:2,f(){p.max=Math.min(6,p.max+1);p.hp=Math.min(p.max,p.hp+1)}},
- //rate:{g:'»',n:'연사 속도 UP',c:'#9be37f',w:2,f(){p.rate=Math.max(0.12,p.rate*0.8)}},
+ rate:{g:'»',n:'발사 속도 UP',c:'#9be37f',f(){p.rate=Math.max(0.12,p.rate*0.8)}},
+
  speed:{g:'↠',n:'이동 속도 UP',c:'#7fe0d4',w:2,f(){p.spd=Math.min(340,p.spd+30)}},
- //pierce:{g:'⇉',n:'관통 눈물',c:'#ffb36b',w:2,f(){p.pierce=Math.min(3,p.pierce+1)}}
+ pierce:{g:'⇉',n:'관통 눈물',c:'#ffb36b',f(){p.pierce=Math.min(3,p.pierce+1)}}
+
 };
-function pickType(){const ks=Object.keys(IT);let r=Math.random()*ks.reduce((a,k)=>a+IT[k].w,0);for(const k of ks){r-=IT[k].w;if(r<=0)return k}return 'heart'}
+function pickType(){const pool=[];if(p.shots<4)pool.push('double','double');if(!p.cross)pool.push('cross','cross');if(p.hp<p.max||p.max<6)pool.push('heart','heart');if(p.rate>0.12)pool.push('rate','rate');if(p.spd<340)pool.push('speed','speed');if(p.pierce<3)pool.push('pierce','pierce');return pool.length?pool[Math.floor(Math.random()*pool.length)]:'heart'}
 function rnd(a,b){return a+Math.random()*(b-a)}
 
 const keys={};
 let state='start',paused=false,t=0,endT=1,p,tears,en,items,toasts,el,spawnT,kills,volleys,runSpeed,runD;
 function resetRun(){
   p={x:W/2,y:H/2,vx:0,vy:0,hp:3,max:3,inv:0,cd:0,r:14,shots:1,cross:false,rate:0.32,spd:220,pierce:0};
-  tears=[];en=[];items=[];toasts=[];el=0;spawnT=0.8;kills=0;volleys=0;shake=0;runD=S.speed;runSpeed=70*Math.pow(runD,0.25);
+  tears=[];en=[];items=[];toasts=[];el=0;spawnT=0.56;kills=0;volleys=0;shake=0;runD=S.speed;runSpeed=70*Math.pow(runD,0.25);
 }
 resetRun();
 function begin(){resetRun();paused=false;state='play';endT=0}
@@ -68,15 +70,15 @@ function spawnFly(){
   if(en.length>=45)return;
   const s=Math.floor(Math.random()*4),j=rnd(-35,35);
   const x=s===2?M+12:s===3?W-M-12:W/2+j,y=s===0?M+12:s===1?H-M-12:H/2+j;
-  if(Math.hypot(x-p.x,y-p.y)<90){spawnT=0.2;return}
+  if(Math.hypot(x-p.x,y-p.y)<90){spawnT=0.14;return}
   en.push({x,y,hp:1,r:11,fl:0,ph:rnd(0,6)});
 }
 function aim(){return[(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0)]}
 function fire(dx,dy){
-  const d=Math.hypot(dx,dy),dirs=p.cross?[[1,0],[-1,0],[0,-1],[0,1]]:[[dx/d,dy/d]];
+  const d=Math.hypot(dx,dy),s=Math.SQRT1_2,dirs=p.cross?[[s,s],[-s,s],[s,-s],[-s,-s]]:[[dx/d,dy/d]];
   for(const[ux,uy]of dirs)for(let i=0;i<p.shots;i++){
     const o=(i-(p.shots-1)/2)*11;
-    tears.push({x:p.x-uy*o,y:p.y+ux*o,vx:ux*380+p.vx*0.3,vy:uy*380+p.vy*0.3,life:0.9,pen:p.pierce});
+    tears.push({x:p.x-uy*o,y:p.y+ux*o,vx:ux*380+p.vx*0.3,vy:uy*380+p.vy*0.3,life:0.9});
   }
   volleys++;p.cd=p.rate;
 }
@@ -89,16 +91,17 @@ addEventListener('keydown',e=>{
   if(e.repeat)return;
   if(state==='play'){
     if(e.code==='KeyP'||e.code==='Escape')togglePause();
-    else if(!paused&&e.code.startsWith('Arrow')){const[dx,dy]=aim();if(dx||dy)fire(dx,dy)}
+    else if(paused&&/^(Digit|Numpad)[123]$/.test(e.code))setLevel(SPEEDS[+e.code.slice(-1)-1]);
+    else if(!paused&&e.code.startsWith('Arrow')){const[dx,dy]=aim();if((dx||dy)&&p.cd<=0)fire(dx,dy)}
   }else if(state==='start'&&/^(Digit|Numpad)[123]$/.test(e.code))setLevel(SPEEDS[+e.code.slice(-1)-1]);
   else if(endT>0.6&&(e.code==='Enter'||e.code==='KeyR'))begin();
 });
 addEventListener('keyup',e=>keys[e.code]=false);
 addEventListener('blur',lostFocus);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)lostFocus()});
-function setLevel(v){S.speed=v;$('spd').value=v;save()}
+function setLevel(v){S.speed=v;runD=v;runSpeed=70*Math.pow(runD,0.25);$('spd').value=v;save()}
 cv.addEventListener('pointerdown',e=>{
-  if(state==='play'){if(paused)paused=false;return}
+  if(state==='play'){if(paused){const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;const i=SPEEDS.findIndex((v,k)=>x>=219+k*126&&x<=329+k*126&&y>=278&&y<=312);if(i>=0){setLevel(SPEEDS[i]);return}paused=false}return}
   if(state==='start'){
     const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
     const i=SPEEDS.findIndex((v,k)=>x>=219+k*126&&x<=329+k*126&&y>=368&&y<=402);
@@ -111,13 +114,13 @@ $('bPause').onclick=e=>{togglePause();e.target.blur()};
 function renderMute(){const b=$('bMute');b.textContent=S.mute?'🔇':'🔊';b.title=S.mute?'소리 켜기':'소리 끄기';b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed',String(S.mute))}
 $('bMute').onclick=e=>{S.mute=!S.mute;if(master)master.gain.value=S.mute?0:0.15;save();renderMute();e.currentTarget.blur()};
 $('rm').onchange=e=>{S.rm=e.target.checked;if(S.rm)shake=0;save();e.target.blur()};
-$('spd').onchange=e=>{S.speed=+e.target.value;save();e.target.blur()};
+$('spd').onchange=e=>{setLevel(+e.target.value);e.target.blur()};
 $('bClear').onclick=e=>{S.runs=[];save();renderLog();e.target.blur()};
 
 function update(dt){
   el+=dt;
   spawnT-=dt;
-  if(spawnT<=0){spawnT=Math.max(0.35,2.2-el*0.021)/Math.pow(runD,0.7);spawnFly()}
+  if(spawnT<=0){spawnT=(Math.max(0.25,2.2-el*0.021)/Math.pow(runD,0.7))*0.7;spawnFly()}
   let ax=(keys.KeyD?1:0)-(keys.KeyA?1:0),ay=(keys.KeyS?1:0)-(keys.KeyW?1:0);
   const l=Math.hypot(ax,ay)||1;ax/=l;ay/=l;
   const k=Math.min(1,dt*12);
@@ -137,7 +140,7 @@ function update(dt){
       if(e.hp>0&&(Math.hypot(s.x-e.x,s.y-e.y)<R||Math.hypot(mx-e.x,my-e.y)<R))hits.push(e);
     }
     hits.sort((a,b)=>Math.hypot(a.x-px,a.y-py)-Math.hypot(b.x-px,b.y-py));
-    for(const e of hits){if(s.life<=0)break;e.hp--;e.fl=0.1;if(s.pen>0)s.pen--;else s.life=0}
+    for(const e of hits){if(s.life<=0)break;e.hp--;e.fl=0.1;s.life=0}
   }
   tears=tears.filter(s=>s.life>0);
   for(const e of en){
@@ -150,7 +153,7 @@ function update(dt){
   en=en.filter(e=>{
     if(e.hp>0)return true;
     kills++;
-    if(Math.random()<0.1)items.push({type:pickType(),x:e.x,y:e.y,life:12});
+    if(Math.random()<0.14)items.push({type:pickType(),x:e.x,y:e.y,life:12});
     return false;
   });
   for(const it of items){
@@ -206,9 +209,13 @@ function drawPlay(){
   if(state==='lose')drawEnd('사망…','#e0364b');
   if(state==='play'&&paused){
     dim(0.65);
-    text('일시정지',W/2,200,48,'#a8d8ff');
-    text('이동 WASD · 발사 방향키',W/2,250,18,'#efe6da','normal');
-    text('P / Esc / 클릭으로 재개',W/2,300,22,'#7fe08a');
+    text('일시정지',W/2,170,44,'#a8d8ff');
+    text('이동 WASD · 발사 방향키',W/2,215,16,'#efe6da','normal');
+    text('난이도 변경: 클릭 또는 숫자 1·2·3',W/2,258,15,'#ffd479','normal');
+    SPEEDS.forEach((v,k)=>{const x=219+k*126,on=v===S.speed;g.fillStyle=on?'#a8d8ff':'rgba(255,255,255,.12)';g.fillRect(x,278,110,34);text(LV[v],x+55,301,18,on?'#1a120e':'#efe6da')});
+    text('P / Esc / 빈 화면 클릭으로 재개',W/2,352,18,'#7fe08a');
+
+
   }
 }
 function drawStart(){
@@ -242,11 +249,11 @@ function renderStatus(){
   setT('hp','♥'.repeat(Math.max(0,p.hp))+'♡'.repeat(Math.max(0,p.max-p.hp))+' ('+Math.max(0,p.hp)+'/'+p.max+')');
   setT('tm',Math.max(0,Math.ceil(GOAL-el))+'초');
   setT('kl',kills+' / '+volleys+'회');
-  setT('pw','발사 ×'+p.shots+(p.cross?' + 사방':'')+(p.pierce?' + 관통'+p.pierce:''));
+  setT('pw','발사 ×'+p.shots+(p.cross?' + 사방':''));
   setT('bStart',state==='start'?'시작':'다시 시작');
   $('bPause').disabled=state!=='play';
   setT('bPause',paused?'재개':'일시정지');
-  $('spd').disabled=state==='play';
+  $('spd').disabled=state==='play'&&!paused;
   setT('note',note);
 }
 function med(a){const s=[...a].sort((x,y)=>x-y),n=s.length,m=n>>1;return n%2?s[m]:(s[m-1]+s[m])/2}
