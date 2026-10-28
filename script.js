@@ -38,20 +38,27 @@ function fx(ev){
 const IT={
  double:{g:'‖',n:'1타 2피',c:'#a8d8ff',w:2,f(){p.shots=Math.min(4,p.shots+1)}},
  cross:{g:'✚',n:'사방 발사',c:'#ffd479',w:1.5,f(){p.cross=true}},
- heart:{g:'♥',n:'생명 +1',c:'#e0364b',w:2,f(){p.max=Math.min(6,p.max+1);p.hp=Math.min(p.max,p.hp+1)}},
+ heart:{g:'♥',n:'생명 +1',c:'#e0364b',f(){p.hp=Math.min(p.max,p.hp+1)}},
  rate:{g:'»',n:'발사 속도 UP',c:'#9be37f',f(){p.rate=Math.max(0.12,p.rate*0.8)}},
-
  speed:{g:'↠',n:'이동 속도 UP',c:'#7fe0d4',w:2,f(){p.spd=Math.min(340,p.spd+30)}},
- pierce:{g:'⇉',n:'관통 눈물',c:'#ffb36b',f(){p.pierce=Math.min(3,p.pierce+1)}}
-
+ pierce:{g:'⇉',n:'관통',c:'#ffb36b',f(){p.pierce=Math.min(3,p.pierce+1)}}
 };
-function pickType(){const pool=[];if(p.shots<4)pool.push('double','double');if(!p.cross)pool.push('cross','cross');if(p.hp<p.max||p.max<6)pool.push('heart','heart');if(p.rate>0.12)pool.push('rate','rate');if(p.spd<340)pool.push('speed','speed');if(p.pierce<3)pool.push('pierce','pierce');return pool.length?pool[Math.floor(Math.random()*pool.length)]:'heart'}
+function pickType(){
+  const pool=[];
+  if(p.shots<4)pool.push('double','double');
+  if(!p.cross)pool.push('cross','cross');
+  if(p.hp<p.max)pool.push('heart','heart');   // 체력이 가득이면 하트는 안 나옴
+  if(p.rate>0.12)pool.push('rate','rate');
+  if(p.spd<340)pool.push('speed','speed');
+  if(p.pierce<3)pool.push('pierce','pierce');
+  return pool.length?pool[Math.floor(Math.random()*pool.length)]:null;   // 다 최대치면 null
+}
 function rnd(a,b){return a+Math.random()*(b-a)}
 
 const keys={};
 let state='start',paused=false,t=0,endT=1,p,tears,en,items,toasts,el,spawnT,kills,volleys,runSpeed,runD;
 function resetRun(){
-  p={x:W/2,y:H/2,vx:0,vy:0,hp:3,max:3,inv:0,cd:0,r:14,shots:1,cross:false,rate:0.32,spd:220,pierce:0};
+  p={x:W/2,y:H/2,vx:0,vy:0,hp:3,max:5,inv:0,cd:0,r:14,shots:1,cross:false,rate:0.2,spd:220,pierce:0};
   tears=[];en=[];items=[];toasts=[];el=0;spawnT=0.56;kills=0;volleys=0;shake=0;runD=S.speed;runSpeed=70*Math.pow(runD,0.25);
 }
 resetRun();
@@ -67,18 +74,21 @@ function lostFocus(){for(const k in keys)keys[k]=false;if(state==='play')paused=
 function hurt(){p.hp--;p.inv=1.2;fx('hit')}
 
 function spawnFly(){
-  if(en.length>=45)return;
-  const s=Math.floor(Math.random()*4),j=rnd(-35,35);
-  const x=s===2?M+12:s===3?W-M-12:W/2+j,y=s===0?M+12:s===1?H-M-12:H/2+j;
-  if(Math.hypot(x-p.x,y-p.y)<90){spawnT=0.14;return}
-  en.push({x,y,hp:1,r:11,fl:0,ph:rnd(0,6)});
+  const n=1+Math.floor(Math.random()*3);                 // 한 번에 1~3마리
+  for(let i=0;i<n;i++){
+    if(en.length>=45)return;
+    const s=Math.floor(Math.random()*4),j=rnd(-35,35);   // 마리마다 문을 따로 랜덤 선택
+    const x=s===2?M+12:s===3?W-M-12:W/2+j,y=s===0?M+12:s===1?H-M-12:H/2+j;
+    en.push({x,y,hp:1,r:11,fl:0,ph:rnd(0,6)});           // 플레이어 위치와 상관없이 생성
+  }
 }
+
 function aim(){return[(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),(keys.ArrowDown?1:0)-(keys.ArrowUp?1:0)]}
 function fire(dx,dy){
   const d=Math.hypot(dx,dy),s=Math.SQRT1_2,dirs=p.cross?[[s,s],[-s,s],[s,-s],[-s,-s]]:[[dx/d,dy/d]];
   for(const[ux,uy]of dirs)for(let i=0;i<p.shots;i++){
     const o=(i-(p.shots-1)/2)*11;
-    tears.push({x:p.x-uy*o,y:p.y+ux*o,vx:ux*380+p.vx*0.3,vy:uy*380+p.vy*0.3,life:0.9});
+    tears.push({x:p.x-uy*o,y:p.y+ux*o,vx:ux*380+p.vx*0.3,vy:uy*380+p.vy*0.3,life:0.9,pen:p.pierce});
   }
   volleys++;p.cd=p.rate;
 }
@@ -120,7 +130,7 @@ $('bClear').onclick=e=>{S.runs=[];save();renderLog();e.target.blur()};
 function update(dt){
   el+=dt;
   spawnT-=dt;
-  if(spawnT<=0){spawnT=(Math.max(0.25,2.2-el*0.021)/Math.pow(runD,0.7))*0.7;spawnFly()}
+  if(spawnT<=0){spawnT=(Math.max(0.25,2.2-el*0.021)/Math.pow(runD,0.7))*1.4;spawnFly()}
   let ax=(keys.KeyD?1:0)-(keys.KeyA?1:0),ay=(keys.KeyS?1:0)-(keys.KeyW?1:0);
   const l=Math.hypot(ax,ay)||1;ax/=l;ay/=l;
   const k=Math.min(1,dt*12);
@@ -140,7 +150,7 @@ function update(dt){
       if(e.hp>0&&(Math.hypot(s.x-e.x,s.y-e.y)<R||Math.hypot(mx-e.x,my-e.y)<R))hits.push(e);
     }
     hits.sort((a,b)=>Math.hypot(a.x-px,a.y-py)-Math.hypot(b.x-px,b.y-py));
-    for(const e of hits){if(s.life<=0)break;e.hp--;e.fl=0.1;s.life=0}
+    for(const e of hits){if(s.life<=0)break;e.hp--;e.fl=0.1;if(s.pen>0)s.pen--;else s.life=0}
   }
   tears=tears.filter(s=>s.life>0);
   for(const e of en){
@@ -153,7 +163,11 @@ function update(dt){
   en=en.filter(e=>{
     if(e.hp>0)return true;
     kills++;
-    if(Math.random()<0.14)items.push({type:pickType(),x:e.x,y:e.y,life:12});
+    const left=Math.max(0,GOAL-el)/GOAL;                 // 남은 시간 비율 (1에서 0으로)
+    if(Math.random()<Math.max(0.02,0.14*left)){          // 14%에서 시작해 줄어들고, 최소 2%
+      const type=pickType();
+      if(type)items.push({type,x:e.x,y:e.y,life:12});
+    }
     return false;
   });
   for(const it of items){
